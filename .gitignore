@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 venv/
+Untitle.ipynb
+steps/*
+git/*
