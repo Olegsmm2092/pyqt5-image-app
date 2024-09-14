@@ -2,6 +2,9 @@ import os
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QLabel, QPushButton, QListWidget, QComboBox, \
     QHBoxLayout, QVBoxLayout
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap
+from PIL import Image, ImageFilter, ImageEnhance
+
 
 # App Settings
 app = QApplication([])
@@ -91,20 +94,73 @@ def getWorkDirectory():
     global working_directory
     working_directory = QFileDialog.getExistingDirectory(
         None, "Select Directory")
-    allowed_extensions = ['.jpg', '.jpeg', '.png', '.svg'] # only local; cant be by args cuz will be `overwriting`
+    # only local; cant be by args cuz will be `overwriting`
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.svg']
     # all_files = os.listdir(working_directory) # modify using ds googleColab; for deep folder
     all_files = getAllFiles(working_directory)
     filtered_files = filter_files_by_extension(all_files, allowed_extensions)
     file_list.clear()  # reset
     # Add files to QListWidget
     for file in filtered_files:
-        file_list.addItem(os.path.basename(file)) # extract only filename;
+        # file_list.addItem(os.path.basename(file)) # extract only filename;
+        file_list.addItem(file)
 
 
-from core.utils import ImageEditor
+# from core.utils import ImageEditor
+class imageEditor:
+    def __init__(self):
+        self.im = None
+        self.original_im = None
+        self.filename = None
+        self.folder = 'edits/'
 
+    def load_image(self, filename):
+        """принимает подгруженный image"""
+        self.filename = filename
+        fullname = os.path.join(working_directory, self.filename)
+        self.im = Image.open(fullname)
+        self.original_im = self.im.copy()
+
+    def save_image(self):
+        path = os.path.join(working_directory, self.folder)
+        # cuz need work_dir too
+        if not os.path.exists(self.folder) or os.path.isdir(self.folder):
+            os.makedirs (path)
+
+        fullname = os.path.join(path, self.filename)  # get name
+        print(path)
+        print(fullname)
+        print("save:", path + self.filename)
+        self.im.save(fullname)
+
+    def show_image(self, path):
+        """show im based on the box coords"""
+        picture_box.hide()
+        im = QPixmap(path)
+        w, h = picture_box.width(), picture_box.height()
+        im = im.scaled(w, h, Qt.KeepAspectRatio)
+        picture_box.setPixmap(im)
+        picture_box.show()
+
+    def gray(self):
+        self.im = self.im.convert("L")
+        self.save_image()
+        im_path = os.path.join(working_directory, self.folder, self.filename)
+        self.show_image(im_path)
+
+
+def displayImage():
+    if file_list.currentRow() >= 0:
+        filename = file_list.currentItem().text()
+        editor_im.load_image(filename)
+        editor_im.show_image(os.path.join(
+            working_directory, editor_im.filename))
+
+
+editor_im = imageEditor()
 
 btn_folder.clicked.connect(getWorkDirectory)
-
+file_list.currentRowChanged.connect(displayImage)
+gray.clicked.connect(editor_im.gray)
 root.show()
 app.exec_()
