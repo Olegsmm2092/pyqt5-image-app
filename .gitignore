@@ -6,3 +6,5 @@ steps/*
 git/*
 img/*
 doc/*
+src/test*
+src/test*.ipynb
