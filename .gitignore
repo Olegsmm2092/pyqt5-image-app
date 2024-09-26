@@ -3,6 +3,7 @@ __pycache__/
 venv/
 Untitle.ipynb
 steps/*
+edits/*
 git/*
 img/*
 doc/*
