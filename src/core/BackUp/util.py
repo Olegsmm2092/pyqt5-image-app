@@ -5,7 +5,7 @@ class ImageManager:
     """back Path Lib 
         to save at BASE_DIR where is file running start run.
     """
-    def __init__(self, folder="./edits/"):
+    def __init__(self, folder="edits/"):
         self.folder = folder
         self.filename = None
         self.fullname = None

@@ -6,11 +6,12 @@ from PyQt5.QtWidgets import (
     QFileDialog, QLabel, QPushButton, QLineEdit, QComboBox, QListWidget,
     QVBoxLayout, QHBoxLayout, QTextEdit, QMessageBox
 )
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPainter, QPen, QPixmap, QImage
+from PyQt5.QtCore import QRect, Qt, QPoint
 from PIL import Image
+import numpy as np
 from core import util
-from core.util import ImageManager  # Assuming ImageManager is implemented
+from core.util import ImageManager
 
 
 class MergedPhotoshopApp(QMainWindow):
@@ -19,8 +20,17 @@ class MergedPhotoshopApp(QMainWindow):
         self.im = None
         self.original_im = None
         self.im_name = None
-        self.working_directory = ""  # or str None ""
+        self.working_directory = "" 
         self.filename = None  # to load image from folder get filename
+        self.fullname = None
+
+        # crop
+        self.start_point = None
+        self.end_point = None
+        self.scale_factor = 1.0
+
+
+
 
         self.im_manager = ImageManager()
         self.initUI()
@@ -29,32 +39,6 @@ class MergedPhotoshopApp(QMainWindow):
         self.setWindowTitle('Merged Photoshop App')
         self.setGeometry(100, 100, 900, 700)
 
-        # Menu Bar
-        menubar = self.menuBar()
-        fileMenu = menubar.addMenu('File')
-
-        openAction = QAction('Open', self)
-        openAction.triggered.connect(self.openFile)
-        fileMenu.addAction(openAction)
-
-        saveAction = QAction('Save', self)
-        saveAction.triggered.connect(self.saveFile)
-        fileMenu.addAction(saveAction)
-
-        # Add the Folder action to the File menu
-        folderAction = QAction('Folder', self)
-        folderAction.triggered.connect(self.getWorkDirectory)
-        fileMenu.addAction(folderAction)
-
-        # Tool Bar
-        toolbar = QToolBar("Main Toolbar")
-        self.addToolBar(toolbar)
-
-        brushButton = QPushButton('Brush')
-        toolbar.addWidget(brushButton)
-
-        eraserButton = QPushButton('Eraser')
-        toolbar.addWidget(eraserButton)
 
         # Main Layout Setup
         self.centralWidget = QWidget()
@@ -76,16 +60,16 @@ class MergedPhotoshopApp(QMainWindow):
         self.left_layout = QVBoxLayout()
         self.right_layout = QVBoxLayout()
 
+
         self.left_layout.addWidget(self.file_list)
         self.left_layout.addWidget(QLabel("Filters:"))
 
-        # Filter buttons
+        # Generate & Apply Filter buttons
         filters = [
-            ("Left", self.rotate_left), ("Right", self.rotate_right),
-            ("Mirror", self.mirror), ("Sharpen", self.sharpen),
-            ("B/W", self.gray), ("Saturation", self.saturate),
-            ("Contrast", self.adjust_contrast), ("Blur", self.blur)
+            ("Folder", self.getWorkDirectory),
+            ("B/W", self.gray),
         ]
+        # decomposition
         for text, handler in filters:
             btn = QPushButton(text)
             btn.clicked.connect(handler)
@@ -101,17 +85,15 @@ class MergedPhotoshopApp(QMainWindow):
 
         # Connection setup
         self.file_list.currentRowChanged.connect(self.displayImage)
-
-    def openFile(self):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self, "Open Image File", "", "Image Files (*.png *.jpg *.bmp)")
-        if file_path:
-            self.load_image(file_path)
-            self.show_image(file_path)
+        # Initialaize with a default image or blank
+        # self.image_label.setPixmap(QPixmap())
 
     def getWorkDirectory(self):
         self.working_directory = QFileDialog.getExistingDirectory(
-            self, None, "Select Directory")
+            self, "Select Directory", "", QFileDialog.ShowDirsOnly)
+        if not self.working_directory:
+            print("No directory selected.") # log or message box
+            return 
         allowed_extensions = ['.jpg', '.jpeg', '.png', '.svg', '.bmp']
         all_files = os.listdir(self.working_directory)
         filtered_files = util.filter_files_by_extensions(
@@ -121,13 +103,6 @@ class MergedPhotoshopApp(QMainWindow):
         for file in filtered_files:
             self.file_list.addItem(file)
 
-   
-    def saveFile(self):
-        options = QFileDialog.Options()
-        fileName, _ = QFileDialog.getSaveFileName(
-            self, "Save File", "", "Images (*.png *.jpg *.bmp)", options=options)
-        if fileName:
-            self.im.save(fileName)
 
     def displayImage(self):
         """Main func to get x2 utils to load n show on the display area image chosen from folder"""
@@ -136,7 +111,7 @@ class MergedPhotoshopApp(QMainWindow):
             self.load_image(filename)
             self.show_image(os.path.join(
                 self.working_directory, self.filename))
-            
+
     def save_and_show(self):
         """Helper to avoid copypast inside methods of ImageEditor"""
         self.im_manager.save(self.im_name, self.im)
@@ -144,12 +119,16 @@ class MergedPhotoshopApp(QMainWindow):
 
      # oop ImageEditor
     def load_image(self, filename):
-        # its other one oop - ImageEditor
-        # from ai give to this oop methods - load, save, ...
         """Load t folder with images"""
+        # if not self.working_directory:
+        #     print("Working directory not set. Cannot load image.") # Optionally: log or message box
+
+        # return
         self.filename = filename
-        fullname = os.path.join(self.working_directory, self.filename)
-        self.im = Image.open(fullname)
+        self.fullname = os.path.join(self.working_directory, self.filename)
+
+
+        self.im = Image.open(self.fullname)
         self.original_im = self.im.copy()
 
         if "icc_profile" in self.im.info:
@@ -158,52 +137,62 @@ class MergedPhotoshopApp(QMainWindow):
         self.im_name = os.path.splitext(os.path.basename(filename))[0]
 
     def show_image(self, path):
-        self.image_label.hide()
-        im = QPixmap(path)
-        if im.isNull():
-            # log
-            print(f"Failed to load image: {path}")
-            return
+        try:
+            self.image_label.hide()
+            im = Image.open(path)
+            if im is None:
+                # log
+                print(f"Failed to load image: {path}")
+                return
 
-        w, h = self.image_label.width(), self.image_label.height()
-        im = im.scaled(w, h, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        self.im_to_crop = im
-        self.image_label.setPixmap(im)
-        self.image_label.show()
+            if im.mode in ("RGBA", "P"):
+                im = im.convert("RGB")
+            data = np.array(im)
 
-    # oop ImageEditor
-    def rotate_left(self):
-        self.im = self.im.rotate(90, expand=True)
-        self.save_and_show()
+            # Validator of channels of image
+            if len(data.shape) != 3 or data.shape[2] != 3:
+                print(f"Unexpected image formatL {path}")
+                return
 
-    def rotate_right(self):
-        self.im = self.im.rotate(-90, expand=True)
-        self.save_and_show()
+            height, width, _ = data.shape # h, w, channels
+            bytes_per_line = 3 * width
+            q_im = QImage(data.data, width, height,
+                        bytes_per_line, QImage.Format_RGB888)
+            
+            if q_im.isNull():
+                print(f"Failed to convert image to QImage: {path}")
+                return
 
-    def mirror(self):
-        """Mirror the image"""
-        # Implement logic
+            im = QPixmap.fromImage(q_im)
+            self.original_im = self.im.copy()
+            self.image_label.setPixmap(im)
+            # reset
+            self.scale_factor = 1.0
+            self.image_label.adjustSize()
+            self.image_label.show()
+        except Exception as ex:
+            ...
 
-    def sharpen(self):
-        """Sharpen the image"""
-        # Implement logic
+    def resizeEvent(self, event):
+        if self.original_im and isinstance(self.original_im, QPixmap):
+            self.scale_factor = min(
+                self.image_label.width() / self.original_im.width(),
+                self.image_label.height() / self.original_im.height()
+            )
+            scaled_pixmap = self.original_im.scaled(
+                self.original_im.size() * self.scale_factor,
+                Qt.KeepAspectRatio, Qt.SmoothTransformation
+            )
+            self.image_label.setPixmap(scaled_pixmap)
+        super().resizeEvent(event)
+            
 
     def gray(self):
         """Convert to grayscale"""
-        self.im = self.im.convert("L")
-        self.save_and_show()
+        if self.im is not None:
+            self.im = self.im.convert("L")
+            self.save_and_show()
 
-    def saturate(self):
-        """Increase saturation"""
-        # Implement logic
-
-    def adjust_contrast(self):
-        """Adjust contrast"""
-        # Implement logic
-
-    def blur(self):
-        """Apply blur effect"""
-        # Implement logic
 
 
 if __name__ == '__main__':
