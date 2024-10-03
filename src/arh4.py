@@ -143,31 +143,28 @@ class Canvas(QLabel):
                 )
                 return
             try:
-                pil_image = Image.open(self.parent.fullname)
+                pil_image = self._qpixmap_to_pil(self.original_image)
                 crop_coords = (left, upper, right, lower)
                 cropped_image = pil_image.crop(crop_coords)
-                self.show_cropped_image(cropped_image)
+                self.show_edited_image(cropped_image)
 
             except Exception as e:
                 QMessageBox.critical(
                     self, "Error", f"Failed to crop image:\n{e}")
-
-    def show_cropped_image(self, pillow_image):
+    
+    def show_edited_image(self, pillow_image):
         """Converted to Pixmap Image from Pil > bytes > Pixmap
             n show on the Canvas
         """
         if isinstance(pillow_image, QPixmap):
             self.original_image = pillow_image
         else:
-
             if pillow_image.mode in ("RGBA", "P"):
                 pillow_image = pillow_image.convert("RGB")
 
             q_image = self._pil_to_qimage(pillow_image)
             # save to /edits; auto saved all changes with choisen image
             self.im_manager.save(self.parent.im_name, pillow_image)
-            # self.im_manager.save(self.im_name, q_image, self.im_format)
-            # self.im; copy to self.original_image
             self.original_image = QPixmap.fromImage(q_image)
 
         self.setPixmap(self.original_image)
@@ -189,46 +186,30 @@ class Canvas(QLabel):
             image = self.original_image.toImage(
             ).convertToFormat(QImage.Format_Grayscale8)
             self.setPixmap(QPixmap.fromImage(image))
-            self.im_manager.save(
-                self.parent.im_name, QPixmap.fromImage(image))
-            self.show_cropped_image(QPixmap.fromImage(image))
+            self.show_edited_image(QPixmap.fromImage(image))
 
     def apply_rotate_left(self):
         if self.original_image:
-            q_image = self.original_image.toImage()
-            # q_image = self.original_image.toImage().convertToFormat(QImage.Format_RGB888)
-            # self.setPixmap(QPixmap.fromImage(q_image))
-
-
-            # Convert QImage to PIL Image
-            # pil_image = Image.fromqpixmap(self.original_image)
-            # сохраняем и переоткрываем изображение из буфера чтобы точно был формат PIL
-            buffer = QBuffer()
-            buffer.open(QIODevice.WriteOnly)
-            q_image.save(buffer, "PNG")
-            pil_image = Image.open(io.BytesIO(buffer.data()))
-
+            pil_image = self._qpixmap_to_pil(self.original_image)
             rotated_pil_image = pil_image.rotate(90, expand=True)
-            
-            # convert back image to q_image
-            rotated_pil_image = self._pil_to_qimage(rotated_pil_image)
+            self.show_edited_image(rotated_pil_image)
 
-            # Update display with rotated image
-            self.original_image = QPixmap.fromImage(rotated_pil_image)
-
-            self.setPixmap(self.original_image)
-            self.im_manager.save(self.parent.im_name,
-                                 self.original_image)
-
-            self.scale_factor = 1.0
-            self.adjustSize()
-
-            self.update()
-
-
-
-
+    def apply_rotate_right(self):
+        if self.original_image:
+            pil_image = self._qpixmap_to_pil(self.original_image)
+            rotated_pil_image = pil_image.rotate(-90, expand=True)
+            self.show_edited_image(rotated_pil_image)
+        
     # utils
+
+    def _qpixmap_to_pil(self, qpixmap):
+        """Convert QPixmap to PIL Image."""
+        q_image = qpixmap.toImage()
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        q_image.save(buffer, "PNG")
+        pil_image = Image.open(io.BytesIO(buffer.data()))
+        return pil_image
 
     def _pil_to_qimage(self, pil_image, qimage_format=QImage.Format_RGB888):
         """Convert a PIL image to QImage."""
@@ -417,6 +398,8 @@ class PhotoshopApp(QMainWindow):
         print("rotate left")
 
     def rotate_right(self):
+        self.image_label.apply_rotate_right()
+        self.txt_log.append("Applied rotate left.")
         print("rotate right")
 
     def brushTool(self, size):
