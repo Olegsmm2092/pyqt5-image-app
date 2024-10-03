@@ -241,6 +241,8 @@ class MergedPhotoshopApp(QMainWindow):
 
         filters = [
             ("Folder", self.getWorkDirectory),
+            ("Left", self.rotate_left),
+            ("Right", self.rotate_right),
             ("B/W", self.gray),
         ]
         for text, handler in filters:
@@ -301,6 +303,13 @@ class MergedPhotoshopApp(QMainWindow):
                 self.image_label.im_name, QPixmap.fromImage(image))
             self.image_label.show_cropped_image(QPixmap.fromImage(image))
 
+    def rotate_left(self):
+        print("rotate left")
+
+    def rotate_right(self):
+        print("rotate right")
+
+        
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = MergedPhotoshopApp()
