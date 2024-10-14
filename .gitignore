@@ -9,3 +9,4 @@ img/*
 doc/*
 src/test*
 src/test*.ipynb
+tools/*
