@@ -62,8 +62,6 @@ class PhotoshopApp(QMainWindow):
         # Side Panel Widget
         self.sidePanelWidget = SidePanelWidget()
 
-        # Frame Layout
-        self.frameLayout = FrameLayout(self)
 
         # Tool Bar
         toolbar = QToolBar("Main Toolbar")
@@ -79,6 +77,9 @@ class PhotoshopApp(QMainWindow):
         self.image_label = Canvas(self)
         self.image_label.setAlignment(Qt.AlignHCenter)
         self.image_label.setStyleSheet("background-color: deepskyblue;")
+        # Frame Layout
+        # self.frameLayout = FrameLayout(self)
+        self.frame = FrameLayout(self.image_label)
 
         # Log area (in the Frame)
         self.txt_log = QTextEdit()
@@ -101,7 +102,10 @@ class PhotoshopApp(QMainWindow):
             ("Mirror", self.mirror), ("Sharpen", self.sharpen),
             ("B/W", self.gray), ("Saturation", self.saturate),
             ("Contrast", self.adjust_contrast), ("Blur", self.blur),
-            ("Frame", self.toggleFrame)
+            ("Brush", self.toggle_brush),
+            ("Add Text", lambda value: self.image_label.activate_add_text(True)),
+            ("Add Text Off", lambda value: self.image_label.activate_add_text(False)),
+            ("Frame", self.toggle_frame),
         ]
         for text, handler in filters:
             btn = QPushButton(text)
@@ -166,11 +170,6 @@ class PhotoshopApp(QMainWindow):
                 os.path.basename(filename))[1]
             self.image_label.load_image(self.fullname)
 
-    def toggleFrame(self):
-        if self.frameLayout.isVisible():
-            self.frameLayout.hideFrame()
-        else:
-            self.frameLayout.showFrame()
 
     def gray(self):
         """Hook gray"""
@@ -224,3 +223,17 @@ class PhotoshopApp(QMainWindow):
 
     def contrastSlider(self):
         print("Contrast slider")
+
+    def toggle_brush(self):
+        if self.image_label.brush_active:
+            self.image_label.activate_brush(False)
+            print("brush Off")
+        else:
+            self.image_label.activate_brush(True)
+            print("brush On")
+
+    def toggle_frame(self):
+        if self.frame.isVisible():
+            self.frame.hideFrame()
+        else:
+            self.frame.showFrame()
