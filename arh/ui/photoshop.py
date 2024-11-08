@@ -113,7 +113,7 @@ class PhotoshopApp(QMainWindow):
             self.left_layout.addWidget(btn)
 
         self.right_layout.addWidget(self.image_label)
-        self.frame_layout.addWidget(self.frameLayout)
+        self.frame_layout.addWidget(self.frame)
 
         self.master_layout.addLayout(self.left_layout, 20)
         self.master_layout.addLayout(self.right_layout, 60)

@@ -1,6 +1,9 @@
 from PyQt5.QtWidgets import (
     QVBoxLayout, QPushButton,
-    QSlider, QFrame, QLabel)
+    QSlider, QFrame, QLabel,
+    QColorDialog, QLineEdit, QFontComboBox,
+    QRadioButton, QButtonGroup)
+from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt
 
 class FrameLayout(QFrame):

@@ -16,7 +16,7 @@ class ToolbarWidget(QWidget):
             ("Zoom in", self.parent.zoomIn),
             ("Zoom out", self.parent.zoomOut), ("Left", self.parent.rotate_left),
             ("Right", self.parent.rotate_left), ("Filter",
-                                                 self.parent.filterTool), ("Frame", self.parent.toggleFrame)
+                                                 self.parent.filterTool), ("Frame", self.parent.toggle_frame)
         ]
         for text, handler in editors:
             btn = QPushButton(text)

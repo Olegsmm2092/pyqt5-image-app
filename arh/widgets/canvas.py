@@ -1,7 +1,7 @@
 import os
 from PyQt5.QtWidgets import QLabel, QMessageBox
-from PyQt5.QtCore import QPoint, Qt, QRect
-from PyQt5.QtGui import QPixmap, QPainter, QPen, QImage
+from PyQt5.QtGui import QPixmap, QPainter, QPen, QImage, QFont
+from PyQt5.QtCore import QPoint, Qt, QRect, QPointF
 from PIL import Image
 from arh.utils.image_conversion import pil_to_qimage, qpixmap_to_pil
 
@@ -129,6 +129,16 @@ class Canvas(QLabel):
 
     def set_text_position(self, position):
         self.text_alignment = position
+
+
+    # заглушки
+    def set_filter_brightness(self, value):
+        value = None
+        print(f'setted brightness to {value}')
+
+    def set_filter_contrast(self, value):
+        value = None
+        print(f'setted contrast to {value}')
 
     def paintEvent(self, event):
         """Draw a rectangle when cropping"""
